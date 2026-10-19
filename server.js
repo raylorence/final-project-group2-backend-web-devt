@@ -1,6 +1,8 @@
 const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
+const path = require('path');
+const fs = require('fs');
 
 // Import database connection configuration
 const connectDB = require('./config/db');
@@ -33,6 +35,33 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // ==========================================
+// Frontend Static Assets Serving
+// ==========================================
+const distCandidates = [
+    path.resolve(__dirname, '../../dist'),
+    path.resolve(__dirname, '../dist'),
+    path.resolve(__dirname, 'dist'),
+    path.resolve(__dirname, 'public')
+];
+
+distCandidates.forEach(distPath => {
+    if (fs.existsSync(distPath)) {
+        app.use(express.static(distPath));
+    }
+});
+
+// Helper to find client build index.html
+const getClientIndexPath = () => {
+    for (const candidate of distCandidates) {
+        const indexPath = path.join(candidate, 'index.html');
+        if (fs.existsSync(indexPath)) {
+            return indexPath;
+        }
+    }
+    return null;
+};
+
+// ==========================================
 // API Routes Registration
 // ==========================================
 
@@ -45,15 +74,39 @@ app.use('/api/scores', scoreRoutes);
 // Admin Moderation routes (Delete users, Delete scores)
 app.use('/api/admin', adminRoutes);
 
-// ==========================================
-// Health Check / Root Endpoint
-// ==========================================
-app.get('/', (req, res) => {
+// Health check endpoints
+app.get(['/api/health', '/api'], (req, res) => {
     res.status(200).json({
         success: true,
         message: 'Huling Kapsula Game API is running smoothly.',
         timestamp: new Date().toISOString()
     });
+});
+
+// ==========================================
+// SPA Catch-All Route (Page Refresh Support)
+// ==========================================
+app.get('{/*splat}', (req, res, next) => {
+    // Avoid intercepting unmatched API calls
+    if (req.originalUrl.startsWith('/api')) {
+        return next();
+    }
+
+    const indexPath = getClientIndexPath();
+    if (indexPath) {
+        return res.sendFile(indexPath);
+    }
+
+    // Default API message if frontend is not built
+    if (req.path === '/') {
+        return res.status(200).json({
+            success: true,
+            message: 'Huling Kapsula Game API is running smoothly.',
+            timestamp: new Date().toISOString()
+        });
+    }
+
+    next();
 });
 
 // ==========================================
@@ -70,11 +123,12 @@ app.use((req, res, next) => {
 // Server Port & Listener
 // ==========================================
 const PORT = process.env.PORT || 5000;
+const HOST = '0.0.0.0';
 
-app.listen(PORT, () => {
+app.listen(PORT, HOST, () => {
     console.log(`========================================`);
     console.log(` Huling Kapsula Backend Server`);
-    console.log(` Running on Port: ${PORT}`);
+    console.log(` Running on: http://${HOST}:${PORT}`);
     console.log(` Mode: ${process.env.NODE_ENV || 'development'}`);
     console.log(`========================================`);
 });
