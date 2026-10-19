@@ -1,0 +1,102 @@
+const Score = require('../models/Score');
+
+/**
+ * Controller: Submit Score (Post-Match / High Score Update)
+ * Route: POST /api/scores
+ * Access: Private (Requires authenticated player JWT)
+ * Description: Submits a new run score. If the player already has a high score record,
+ *              updates their personal best if the new score surpasses it (CRUD Update requirement).
+ */
+exports.submitScore = async (req, res) => {
+    const { totalScore } = req.body;
+
+    try {
+        // Validate score input
+        if (totalScore === undefined || totalScore === null || typeof totalScore !== 'number') {
+            return res.status(400).json({
+                success: false,
+                message: 'Please provide a valid numeric totalScore'
+            });
+        }
+
+        const playerId = req.user._id;
+
+        // Check if player already has an existing score record
+        let existingScore = await Score.findOne({ player: playerId });
+
+        if (existingScore) {
+            // Personal Best Synchronization logic
+            if (totalScore > existingScore.totalScore) {
+                const previousBest = existingScore.totalScore;
+                existingScore.totalScore = totalScore;
+                await existingScore.save();
+
+                return res.status(200).json({
+                    success: true,
+                    message: 'New personal best score recorded and updated!',
+                    isPersonalBest: true,
+                    previousBest: previousBest,
+                    data: existingScore
+                });
+            } else {
+                return res.status(200).json({
+                    success: true,
+                    message: 'Score submitted. Personal best remains unchanged.',
+                    isPersonalBest: false,
+                    personalBest: existingScore.totalScore,
+                    data: existingScore
+                });
+            }
+        } else {
+            // Create first score entry for this player
+            const newScore = await Score.create({
+                player: playerId,
+                totalScore: totalScore
+            });
+
+            return res.status(201).json({
+                success: true,
+                message: 'First score entry created successfully!',
+                isPersonalBest: true,
+                data: newScore
+            });
+        }
+    } catch (error) {
+        console.error('Submit Score Error:', error.message);
+        return res.status(500).json({
+            success: false,
+            message: 'Server error while submitting score',
+            error: error.message
+        });
+    }
+};
+
+/**
+ * Controller: Get Leaderboard Scores
+ * Route: GET /api/scores
+ * Access: Public
+ * Description: Retrieves the top 10 survival scores sorted in descending order,
+ *              populated with the player's username.
+ */
+exports.getScores = async (req, res) => {
+    try {
+        // Query top 10 scores sorted from highest to lowest
+        const leaderboard = await Score.find()
+            .populate('player', 'username role')
+            .sort({ totalScore: -1 })
+            .limit(10);
+
+        return res.status(200).json({
+            success: true,
+            count: leaderboard.length,
+            data: leaderboard
+        });
+    } catch (error) {
+        console.error('Get Scores Error:', error.message);
+        return res.status(500).json({
+            success: false,
+            message: 'Server error while retrieving leaderboard',
+            error: error.message
+        });
+    }
+};
