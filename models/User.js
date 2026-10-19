@@ -39,23 +39,12 @@ const UserSchema = new mongoose.Schema(
  * Pre-Save Mongoose Hook
  * Automatically hashes the user's password using bcrypt before persisting to the database.
  */
-UserSchema.pre('save', async function (next) {
-    // Only hash password if it has been modified or is newly created
+UserSchema.pre('save', async function () {
     if (!this.isModified('password')) {
-        return next();
+        return;
     }
-
-    try {
-        // Generate cryptographic salt with factor of 10
-        const salt = await bcrypt.genSalt(10);
-
-        // Hash plaintext password with generated salt
-        this.password = await bcrypt.hash(this.password, salt);
-
-        next();
-    } catch (err) {
-        next(err);
-    }
+    const salt = await bcrypt.genSalt(10);
+    this.password = await bcrypt.hash(this.password, salt);
 });
 
 /**

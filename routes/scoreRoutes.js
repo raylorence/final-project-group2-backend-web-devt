@@ -4,11 +4,14 @@ const router = express.Router();
 // Import score controller functions
 const {
     getScores,
-    submitScore
+    submitScore,
+    getMyBestScore
 } = require('../controllers/scoreController');
 
 // Import authentication middleware
 const { protect } = require('../middleware/authMiddleware');
+
+router.get('/me', protect, getMyBestScore);
 
 // ==========================================
 // Score & Leaderboard Endpoints

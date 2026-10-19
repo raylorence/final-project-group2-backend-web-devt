@@ -16,6 +16,10 @@ const ScoreSchema = new mongoose.Schema(
             required: [true, 'Please provide the total score accumulated'],
             default: 0,
             min: [0, 'Score cannot be negative']
+        },
+        survivalTime: {
+            type: Number,
+            default: 0
         }
     },
     {

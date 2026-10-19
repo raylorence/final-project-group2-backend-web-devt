@@ -8,7 +8,7 @@ const Score = require('../models/Score');
  *              updates their personal best if the new score surpasses it (CRUD Update requirement).
  */
 exports.submitScore = async (req, res) => {
-    const { totalScore } = req.body;
+    const { totalScore, survivalTime } = req.body;
 
     try {
         // Validate score input
@@ -29,6 +29,7 @@ exports.submitScore = async (req, res) => {
             if (totalScore > existingScore.totalScore) {
                 const previousBest = existingScore.totalScore;
                 existingScore.totalScore = totalScore;
+                if (survivalTime) existingScore.survivalTime = survivalTime;
                 await existingScore.save();
 
                 return res.status(200).json({
@@ -51,7 +52,8 @@ exports.submitScore = async (req, res) => {
             // Create first score entry for this player
             const newScore = await Score.create({
                 player: playerId,
-                totalScore: totalScore
+                totalScore: totalScore,
+                survivalTime: survivalTime || 0
             });
 
             return res.status(201).json({
@@ -98,5 +100,19 @@ exports.getScores = async (req, res) => {
             message: 'Server error while retrieving leaderboard',
             error: error.message
         });
+    }
+};
+
+exports.getMyBestScore = async (req, res) => {
+    try {
+        const score = await Score.findOne({ player: req.user._id });
+        return res.status(200).json({
+            success: true,
+            best: score ? score.totalScore : 0,
+            survivalTime: score ? score.survivalTime || 0 : 0,
+            data: score
+        });
+    } catch (error) {
+        return res.status(500).json({ success: false, message: error.message });
     }
 };
