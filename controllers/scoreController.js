@@ -11,6 +11,14 @@ exports.submitScore = async (req, res) => {
     const { totalScore, survivalTime } = req.body;
 
     try {
+        // Prevent admin accounts from playing and recording scores
+        if (req.user && req.user.role === 'admin') {
+            return res.status(403).json({
+                success: false,
+                message: 'Admins are not allowed to submit scores or play the game'
+            });
+        }
+
         // Validate score input
         if (totalScore === undefined || totalScore === null || typeof totalScore !== 'number') {
             return res.status(400).json({

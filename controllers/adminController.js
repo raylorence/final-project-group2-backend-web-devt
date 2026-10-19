@@ -2,6 +2,31 @@ const User = require('../models/User');
 const Score = require('../models/Score');
 
 /**
+ * Controller: Get All Users
+ * Route: GET /api/admin/users
+ * Access: Private/Admin
+ * Description: Retrieves a list of all registered users (excluding password).
+ */
+exports.getUsers = async (req, res) => {
+    try {
+        const users = await User.find().select('-password').sort({ createdAt: -1 });
+
+        return res.status(200).json({
+            success: true,
+            count: users.length,
+            data: users
+        });
+    } catch (error) {
+        console.error('Get Users Error:', error.message);
+        return res.status(500).json({
+            success: false,
+            message: 'Server error while fetching users',
+            error: error.message
+        });
+    }
+};
+
+/**
  * Controller: Delete User and Associated Data
  * Route: DELETE /api/admin/users/:userId
  * Access: Private/Admin
