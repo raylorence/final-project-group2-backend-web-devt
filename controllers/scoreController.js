@@ -10,12 +10,27 @@ const Score = require('../models/Score');
 exports.submitScore = async (req, res) => {
     const { totalScore, survivalTime } = req.body;
 
+
+
     try {
         // Prevent admin accounts from playing and recording scores
         if (req.user && req.user.role === 'admin') {
             return res.status(403).json({
                 success: false,
                 message: 'Admins are not allowed to submit scores or play the game'
+            });
+        }
+
+        if (totalScore > existingScore.totalScore || (totalScore === existingScore.totalScore && survivalTime > existingScore.survivalTime)) {
+            const previousBest = existingScore.totalScore;
+            existingScore.totalScore = totalScore;
+            existingScore.survivalTime = survivalTime || existingScore.survivalTime;
+            await existingScore.save();
+            return res.status(200).json({
+                success: true,
+                message: 'New personal best record updated!',
+                isPersonalBest: true,
+                data: existingScore
             });
         }
 
@@ -93,7 +108,7 @@ exports.getScores = async (req, res) => {
         // Query top 10 scores sorted from highest to lowest
         const leaderboard = await Score.find()
             .populate('player', 'username role')
-            .sort({ totalScore: -1 })
+            .sort({ totalScore: -1, survivalTime: -1 }) // Breaks ties with survival duration
             .limit(10);
 
         return res.status(200).json({
