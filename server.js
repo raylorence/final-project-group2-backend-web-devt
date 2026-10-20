@@ -17,16 +17,6 @@ const allowedOrigins = [
     process.env.CLIENT_URL // Set this in your Render environment variables to your Vercel URL
 ].filter(Boolean);
 
-app.use(cors({
-    origin: (origin, callback) => {
-        if (!origin || allowedOrigins.includes(origin) || process.env.NODE_ENV !== 'production') {
-            callback(null, true);
-        } else {
-            callback(new Error('Not allowed by CORS policy'));
-        }
-    },
-    credentials: true
-}));
 
 // Import database connection configuration
 const connectDB = require('./config/db');
@@ -50,7 +40,16 @@ const app = express();
 // ==========================================
 
 // Enable Cross-Origin Resource Sharing (CORS) for frontend requests
-app.use(cors());
+app.use(cors({
+    origin: (origin, callback) => {
+        if (!origin || allowedOrigins.includes(origin) || process.env.NODE_ENV !== 'production') {
+            callback(null, true);
+        } else {
+            callback(new Error('Not allowed by CORS policy'));
+        }
+    },
+    credentials: true
+}));
 
 // Parse incoming JSON payloads in request bodies
 app.use(express.json());
