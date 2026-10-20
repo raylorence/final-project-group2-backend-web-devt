@@ -10,27 +10,12 @@ const Score = require('../models/Score');
 exports.submitScore = async (req, res) => {
     const { totalScore, survivalTime } = req.body;
 
-
-
     try {
         // Prevent admin accounts from playing and recording scores
         if (req.user && req.user.role === 'admin') {
             return res.status(403).json({
                 success: false,
                 message: 'Admins are not allowed to submit scores or play the game'
-            });
-        }
-
-        if (totalScore > existingScore.totalScore || (totalScore === existingScore.totalScore && survivalTime > existingScore.survivalTime)) {
-            const previousBest = existingScore.totalScore;
-            existingScore.totalScore = totalScore;
-            existingScore.survivalTime = survivalTime || existingScore.survivalTime;
-            await existingScore.save();
-            return res.status(200).json({
-                success: true,
-                message: 'New personal best record updated!',
-                isPersonalBest: true,
-                data: existingScore
             });
         }
 
@@ -44,15 +29,16 @@ exports.submitScore = async (req, res) => {
 
         const playerId = req.user._id;
 
-        // Check if player already has an existing score record
+        // Fetch the existing score from the database
         let existingScore = await Score.findOne({ player: playerId });
 
         if (existingScore) {
-            // Personal Best Synchronization logic
-            if (totalScore > existingScore.totalScore) {
+            // Personal Best Synchronization logic (with survivalTime tie-breaker)
+            if (totalScore > existingScore.totalScore || (totalScore === existingScore.totalScore && survivalTime > existingScore.survivalTime)) {
                 const previousBest = existingScore.totalScore;
                 existingScore.totalScore = totalScore;
-                if (survivalTime) existingScore.survivalTime = survivalTime;
+                existingScore.survivalTime = survivalTime || existingScore.survivalTime;
+
                 await existingScore.save();
 
                 return res.status(200).json({
