@@ -4,6 +4,7 @@ const router = express.Router();
 // Import admin controller functions
 const {
     getUsers,
+    getAllScores,
     deleteUser,
     deleteScore
 } = require('../controllers/adminController');
@@ -23,7 +24,8 @@ router.get(
     '/users',
     protect,
     adminOnly,
-    getUsers
+    getUsers,
+    getAllScores
 );
 
 // DELETE /api/admin/users/:userId -> Delete player account and associated scores (Admin only)

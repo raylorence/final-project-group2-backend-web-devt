@@ -26,6 +26,21 @@ exports.getUsers = async (req, res) => {
     }
 };
 
+exports.getAllScores = async (req, res) => {
+    try {
+        const scores = await Score.find()
+            .populate('player', 'username role')
+            .sort({ totalScore: -1 }); // No .limit(10) cap
+        return res.status(200).json({
+            success: true,
+            count: scores.length,
+            data: scores
+        });
+    } catch (error) {
+        return res.status(500).json({ success: false, message: error.message });
+    }
+};
+
 /**
  * Controller: Delete User and Associated Data
  * Route: DELETE /api/admin/users/:userId

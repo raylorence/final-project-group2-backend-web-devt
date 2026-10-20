@@ -4,6 +4,30 @@ const dotenv = require('dotenv');
 const path = require('path');
 const fs = require('fs');
 
+// Check environment variables early
+if (!process.env.JWT_SECRET && process.env.NODE_ENV === 'production') {
+    console.error('FATAL ERROR: JWT_SECRET environment variable is not defined.');
+    process.exit(1);
+}
+
+// Restrict CORS configuration
+const allowedOrigins = [
+    'http://localhost:5173',
+    'http://localhost:3000',
+    process.env.CLIENT_URL // Set this in your Render environment variables to your Vercel URL
+].filter(Boolean);
+
+app.use(cors({
+    origin: (origin, callback) => {
+        if (!origin || allowedOrigins.includes(origin) || process.env.NODE_ENV !== 'production') {
+            callback(null, true);
+        } else {
+            callback(new Error('Not allowed by CORS policy'));
+        }
+    },
+    credentials: true
+}));
+
 // Import database connection configuration
 const connectDB = require('./config/db');
 

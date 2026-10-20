@@ -50,7 +50,7 @@ exports.registerUser = async (req, res) => {
         const user = await User.create({
             username,
             password,
-            role: role || 'player'
+            role: 'player'
         });
 
         if (user) {
