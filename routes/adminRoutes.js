@@ -24,7 +24,14 @@ router.get(
     '/users',
     protect,
     adminOnly,
-    getUsers,
+    getUsers
+);
+
+// GET /api/admin/scores -> Retrieve all submitted scores without a 10-item cap (Admin only)
+router.get(
+    '/scores',
+    protect,
+    adminOnly,
     getAllScores
 );
 
