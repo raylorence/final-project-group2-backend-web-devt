@@ -45,7 +45,7 @@ const allowedOrigins = [
 ].filter(Boolean);
 
 // Regex matching all Vercel deployment and preview subdomains: *.vercel.app
-const vercelPattern = /^https:\/\/.*\.vercel\.app$/;
+const vercelPattern = /^https:\/\/([a-zA-Z0-9-]+\.)*vercel\.app$/;
 
 app.use(cors({
     origin: (origin, callback) => {
