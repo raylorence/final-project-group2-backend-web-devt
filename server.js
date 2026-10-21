@@ -41,16 +41,30 @@ const app = express();
 const allowedOrigins = [
     'http://localhost:5173',
     'http://localhost:3000',
-    process.env.CLIENT_ORIGIN
+    process.env.CLIENT_ORIGIN // e.g. https://your-main-domain.vercel.app
 ].filter(Boolean);
+
+// Regex matching all Vercel deployment and preview subdomains: *.vercel.app
+const vercelPattern = /^https:\/\/.*\.vercel\.app$/;
 
 app.use(cors({
     origin: (origin, callback) => {
-        if (!origin || allowedOrigins.includes(origin) || process.env.NODE_ENV !== 'production') {
-            callback(null, true);
-        } else {
-            callback(new Error('Not allowed by CORS policy'));
+        // Allow server-to-server or non-browser tools (curl, postman, health checks)
+        if (!origin) {
+            return callback(null, true);
         }
+
+        // Allow local development environments unconditionally
+        if (process.env.NODE_ENV !== 'production') {
+            return callback(null, true);
+        }
+
+        // Allow specified origins or any Vercel preview/production domain
+        if (allowedOrigins.includes(origin) || vercelPattern.test(origin)) {
+            return callback(null, true);
+        }
+
+        return callback(new Error(`Not allowed by CORS policy: ${origin}`));
     },
     credentials: true
 }));
