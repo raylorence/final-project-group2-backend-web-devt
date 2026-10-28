@@ -17,6 +17,11 @@ const ScoreSchema = new mongoose.Schema(
             default: 0,
             min: [0, 'Score cannot be negative']
         },
+        kills: {
+            type: Number,
+            default: 0,
+            min: [0, 'Kills cannot be negative']
+        },
         survivalTime: {
             type: Number,
             default: 0
