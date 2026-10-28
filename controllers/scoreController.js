@@ -9,7 +9,6 @@ const Score = require('../models/Score');
  */
 exports.submitScore = async (req, res) => {
     const { totalScore, survivalTime } = req.body;
-    const kills = typeof req.body.kills === 'number' && req.body.kills >= 0 ? req.body.kills : 0;
 
     try {
         // Prevent admin accounts from playing and recording scores
@@ -40,8 +39,6 @@ exports.submitScore = async (req, res) => {
                 existingScore.totalScore = totalScore;
                 existingScore.survivalTime = survivalTime || existingScore.survivalTime;
 
-                existingScore.kills = kills; // Update kills if provided
-
                 await existingScore.save();
 
                 return res.status(200).json({
@@ -66,7 +63,6 @@ exports.submitScore = async (req, res) => {
                 const newScore = await Score.create({
                 player: playerId,
                 totalScore: totalScore,
-                kills: kills,
                 survivalTime: survivalTime || 0
             });
         });
