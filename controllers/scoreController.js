@@ -60,12 +60,10 @@ exports.submitScore = async (req, res) => {
         } else {
             // Create first score entry for this player
             const newScore = await Score.create({
-                const newScore = await Score.create({
                 player: playerId,
                 totalScore: totalScore,
                 survivalTime: survivalTime || 0
             });
-        });
 
             return res.status(201).json({
                 success: true,
