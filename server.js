@@ -39,10 +39,12 @@ const app = express();
 // Enable Cross-Origin Resource Sharing (CORS) for frontend requests
 // Restrict CORS configuration
 const allowedOrigins = [
-    'http://localhost:5173',
-    'http://localhost:3000',
-    process.env.CLIENT_ORIGIN // e.g. https://your-main-domain.vercel.app
+    process.env.CLIENT_ORIGIN
 ].filter(Boolean);
+
+if (process.env.NODE_ENV !== 'production') {
+    allowedOrigins.push('http://localhost:5173', 'http://localhost:3000');
+}
 
 // Regex matching all Vercel deployment and preview subdomains: *.vercel.app
 const vercelPattern = /^https:\/\/([a-zA-Z0-9-]+\.)*vercel\.app$/;
