@@ -21,7 +21,7 @@ const protect = async (req, res, next) => {
             // Verify and decode token with JWT secret
             const decoded = jwt.verify(
                 token,
-                process.env.JWT_SECRET || 'secret'
+                process.env.JWT_SECRET
             );
 
             // Fetch user from DB excluding password field

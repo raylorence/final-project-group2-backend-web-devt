@@ -1,19 +1,15 @@
 require('dotenv').config();
-
 const express = require('express');
 const cors = require('cors');
-const dotenv = require('dotenv');
 const path = require('path');
 const fs = require('fs');
+const mongoose = require('mongoose');
 
 // Check environment variables early
-if (!process.env.JWT_SECRET && process.env.NODE_ENV === 'production') {
+if (!process.env.JWT_SECRET) {
     console.error('FATAL ERROR: JWT_SECRET environment variable is not defined.');
     process.exit(1);
 }
-
-
-
 
 // Import database connection configuration
 const connectDB = require('./config/db');
@@ -23,9 +19,6 @@ const authRoutes = require('./routes/authRoutes');
 const scoreRoutes = require('./routes/scoreRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 
-// Load environment variables from .env file
-dotenv.config();
-
 // Initialize MongoDB database connection
 connectDB();
 
@@ -33,36 +26,32 @@ connectDB();
 const app = express();
 
 // ==========================================
-// Global Middlewares
+// CORS Configuration
 // ==========================================
+const isProduction = process.env.NODE_ENV === 'production';
 
-// Enable Cross-Origin Resource Sharing (CORS) for frontend requests
-// Restrict CORS configuration
+// In production, only allow explicitly designated front-end origins
 const allowedOrigins = [
-    process.env.CLIENT_ORIGIN
+    process.env.CLIENT_ORIGIN // e.g. https://your-app.vercel.app
 ].filter(Boolean);
 
-if (process.env.NODE_ENV !== 'production') {
+// Localhost is only permitted during local development
+if (!isProduction) {
     allowedOrigins.push('http://localhost:5173', 'http://localhost:3000');
 }
 
-// Regex matching all Vercel deployment and preview subdomains: *.vercel.app
-const vercelPattern = /^https:\/\/([a-zA-Z0-9-]+\.)*vercel\.app$/;
+// Scoped strictly to your repository/project deployment names on Vercel
+// Change 'final-project-group2' to match your exact Vercel project name
+const vercelProjectPattern = /^https:\/\/final-project-group2(-[a-zA-Z0-9-]+)?\.vercel\.app$/;
 
 app.use(cors({
     origin: (origin, callback) => {
-        // Allow server-to-server or non-browser tools (curl, postman, health checks)
+        // Allow requests with no origin (mobile apps, curl, server-to-server, uptime monitors)
         if (!origin) {
             return callback(null, true);
         }
 
-        // Allow local development environments unconditionally
-        if (process.env.NODE_ENV !== 'production') {
-            return callback(null, true);
-        }
-
-        // Allow specified origins or any Vercel preview/production domain
-        if (allowedOrigins.includes(origin) || vercelPattern.test(origin)) {
+        if (allowedOrigins.includes(origin) || vercelProjectPattern.test(origin)) {
             return callback(null, true);
         }
 
@@ -71,10 +60,8 @@ app.use(cors({
     credentials: true
 }));
 
-// Parse incoming JSON payloads in request bodies
+// Parse incoming JSON payloads and URL-encoded forms
 app.use(express.json());
-
-// Parse incoming URL-encoded form data
 app.use(express.urlencoded({ extended: true }));
 
 // ==========================================
@@ -93,7 +80,6 @@ distCandidates.forEach(distPath => {
     }
 });
 
-// Helper to find client build index.html
 const getClientIndexPath = () => {
     for (const candidate of distCandidates) {
         const indexPath = path.join(candidate, 'index.html');
@@ -107,40 +93,45 @@ const getClientIndexPath = () => {
 // ==========================================
 // API Routes Registration
 // ==========================================
-
-// Authentication routes (Register, Login)
 app.use('/api/auth', authRoutes);
-
-// Score & Leaderboard routes (Submit score, Fetch top scores)
 app.use('/api/scores', scoreRoutes);
-
-// Admin Moderation routes (Delete users, Delete scores)
 app.use('/api/admin', adminRoutes);
 
-// Health check endpoints
-app.get(['/api/health', '/api'], (req, res) => {
-    res.status(200).json({
-        success: true,
-        message: 'Huling Kapsula Game API is running smoothly.',
-        timestamp: new Date().toISOString()
-    });
+// Health check endpoint (also verifies and wakes MongoDB connection)
+app.get(['/api/health', '/api'], async (req, res) => {
+    try {
+        const isDbReady = mongoose.connection.readyState === 1;
+        if (isDbReady && mongoose.connection.db) {
+            await mongoose.connection.db.admin().ping();
+        }
+
+        return res.status(200).json({
+            success: true,
+            status: 'online',
+            database: isDbReady ? 'connected' : 'connecting',
+            timestamp: new Date().toISOString()
+        });
+    } catch (err) {
+        return res.status(200).json({
+            success: true,
+            status: 'online',
+            database: 'initializing',
+            error: err.message
+        });
+    }
 });
 
 // ==========================================
-// SPA Catch-All Route (Page Refresh Support)
+// SPA Catch-All Route
 // ==========================================
 app.get('{/*splat}', (req, res, next) => {
-    // Avoid intercepting unmatched API calls
     if (req.originalUrl.startsWith('/api')) {
         return next();
     }
-
     const indexPath = getClientIndexPath();
     if (indexPath) {
         return res.sendFile(indexPath);
     }
-
-    // Default API message if frontend is not built
     if (req.path === '/') {
         return res.status(200).json({
             success: true,
@@ -148,14 +139,13 @@ app.get('{/*splat}', (req, res, next) => {
             timestamp: new Date().toISOString()
         });
     }
-
     next();
 });
 
 // ==========================================
 // 404 Catch-All Handler
 // ==========================================
-app.use((req, res, next) => {
+app.use((req, res) => {
     res.status(404).json({
         success: false,
         message: `Resource not found: ${req.originalUrl}`
